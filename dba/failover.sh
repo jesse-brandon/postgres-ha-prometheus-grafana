@@ -1,0 +1,1 @@
+pg_ctl promote -D $PGDATA

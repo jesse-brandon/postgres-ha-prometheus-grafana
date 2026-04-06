@@ -1,0 +1,52 @@
+services:
+  postgres-primary:
+    image: postgres:15
+    container_name: pg-primary
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    volumes:
+      - ./postgres/primary:/docker-entrypoint-initdb.d
+      - pg_primary_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  postgres-replica:
+    image: postgres:15
+    container_name: pg-replica
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    depends_on:
+      - postgres-primary
+    volumes:
+      - pg_replica_data:/var/lib/postgresql/data
+      - ./postgres/replica:/replica
+    command: ["bash", "/replica/setup-replica.sh"]
+    ports:
+      - "5433:5432"
+
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://admin:admin@postgres-primary:5432/postgres?sslmode=disable"
+    ports:
+      - "9187:9187"
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./monitoring/grafana:/var/lib/grafana
+
+volumes:
+  pg_primary_data:
+  pg_replica_data:
