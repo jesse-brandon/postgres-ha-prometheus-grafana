@@ -1,40 +1,56 @@
 services:
-  postgres-primary:
+  pg-primary:
     image: postgres:15
     container_name: pg-primary
+    restart: unless-stopped
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
+      POSTGRES_DB: appdb
     volumes:
-      - ./postgres/primary:/docker-entrypoint-initdb.d
       - pg_primary_data:/var/lib/postgresql/data
+      - ./postgres/primary/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./postgres/primary/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./postgres/primary/pg_hba.conf:/etc/postgresql/pg_hba.conf
+      - ./postgres/wal-archive:/wal-archive
+    command: >
+      postgres
+      -c config_file=/etc/postgresql/postgresql.conf
     ports:
       - "5432:5432"
 
-  postgres-replica:
+  pg-replica:
     image: postgres:15
     container_name: pg-replica
-    environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
+    restart: unless-stopped
     depends_on:
-      - postgres-primary
+      - pg-primary
+    environment:
+      PGPASSWORD: admin
     volumes:
       - pg_replica_data:/var/lib/postgresql/data
-      - ./postgres/replica:/replica
-    command: ["bash", "/replica/setup-replica.sh"]
+      - ./postgres/replica/setup-replica.sh:/setup-replica.sh
+      - ./postgres/primary/pg_hba.conf:/etc/postgresql/pg_hba.conf
+      - ./postgres/wal-archive:/wal-archive
+    entrypoint: ["/bin/bash", "/setup-replica.sh"]
     ports:
       - "5433:5432"
 
   postgres-exporter:
     image: quay.io/prometheuscommunity/postgres-exporter
+    container_name: postgres-exporter
+    restart: unless-stopped
     environment:
-      DATA_SOURCE_NAME: "postgresql://admin:admin@postgres-primary:5432/postgres?sslmode=disable"
+      DATA_SOURCE_NAME: "postgresql://admin:admin@pg-primary:5432/postgres?sslmode=disable"
     ports:
       - "9187:9187"
+    depends_on:
+      - pg-primary
 
   prometheus:
     image: prom/prometheus
+    container_name: prometheus
+    restart: unless-stopped
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
@@ -42,10 +58,15 @@ services:
 
   grafana:
     image: grafana/grafana
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
     ports:
       - "3000:3000"
-    volumes:
-      - ./monitoring/grafana:/var/lib/grafana
 
 volumes:
   pg_primary_data:

@@ -1,1 +1,1 @@
-SELECT now() - pg_last_xact_replay_timestamp();
+SELECT now() - pg_last_xact_replay_timestamp() AS replication_delay;

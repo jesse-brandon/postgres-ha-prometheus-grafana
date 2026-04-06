@@ -1,1 +1,2 @@
-pg_basebackup -h postgres-primary -D /backup -U admin -Fp -Xs -P
+#!/bin/bash
+pg_dump -h localhost -U admin appdb > backup.sql

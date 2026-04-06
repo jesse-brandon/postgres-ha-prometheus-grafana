@@ -1,0 +1,1 @@
+pg_basebackup -h postgres-primary -D /backup -U admin -Fp -Xs -P
