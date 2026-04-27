@@ -1,0 +1,153 @@
+{
+    "title": "PgBouncer (Multi-DB)",
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "5s",
+  
+    "templating": {
+        "list": [
+          {
+            "name": "database",
+            "type": "query",
+            "datasource": "Prometheus",
+            "definition": "label_values(pgbouncer_pools_client_active_connections, database)",
+            "query": {
+              "query": "label_values(pgbouncer_pools_client_active_connections, database)",
+              "refId": "StandardVariableQuery"
+            },
+            "includeAll": true,
+            "multi": false,
+            "allValue": ".*"
+          }
+        ]
+      },
+    
+  
+    "panels": [
+  
+      {
+        "type": "stat",
+        "title": "PgBouncer Up",
+        "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+        "targets": [{ "expr": "pgbouncer_up" }]
+      },
+      {
+        "type": "stat",
+        "title": "Total Active Clients",
+        "gridPos": { "x": 4, "y": 0, "w": 4, "h": 4 },
+        "targets": [{ "expr": "sum(pgbouncer_pools_client_active_connections)" }]
+      },
+      {
+        "type": "stat",
+        "title": "Total Waiting Clients",
+        "gridPos": { "x": 8, "y": 0, "w": 4, "h": 4 },
+        "targets": [{ "expr": "sum(pgbouncer_pools_client_waiting_connections)" }]
+      },
+      {
+        "type": "stat",
+        "title": "Pool Utilization %",
+        "gridPos": { "x": 12, "y": 0, "w": 4, "h": 4 },
+        "targets": [
+          {
+            "expr": "100 * sum(pgbouncer_pools_client_active_connections) / sum(pgbouncer_databases_pool_size)"
+          }
+        ]
+      },
+  
+      {
+        "type": "timeseries",
+        "title": "Active Clients by DB",
+        "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum by (database) (pgbouncer_pools_client_active_connections{database=~\"$database\"})",
+            "legendFormat": "{{database}}"
+          }
+        ]
+      },
+      {
+        "type": "timeseries",
+        "title": "Waiting Clients by DB",
+        "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum by (database) (pgbouncer_pools_client_waiting_connections{database=~\"$database\"})",
+            "legendFormat": "{{database}}"
+          }
+        ]
+      },
+  
+      {
+        "type": "timeseries",
+        "title": "Server Connections by DB",
+        "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum by (database) (pgbouncer_pools_server_active_connections{database=~\"$database\"})",
+            "legendFormat": "{{database}} active"
+          },
+          {
+            "expr": "sum by (database) (pgbouncer_pools_server_idle_connections{database=~\"$database\"})",
+            "legendFormat": "{{database}} idle"
+          }
+        ]
+      },
+      {
+        "type": "timeseries",
+        "title": "Max Wait Time by DB",
+        "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "max by (database) (pgbouncer_pools_client_maxwait_seconds{database=~\"$database\"})",
+            "legendFormat": "{{database}}"
+          }
+        ]
+      },
+  
+      {
+        "type": "timeseries",
+        "title": "QPS by DB",
+        "gridPos": { "x": 0, "y": 20, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "rate(pgbouncer_stats_totals_queries_pooled_total{database=~\"$database\"}[1m])",
+            "legendFormat": "{{database}}"
+          }
+        ]
+      },
+      {
+        "type": "timeseries",
+        "title": "TPS by DB",
+        "gridPos": { "x": 12, "y": 20, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "rate(pgbouncer_stats_totals_sql_transactions_pooled_total{database=~\"$database\"}[1m])",
+            "legendFormat": "{{database}}"
+          }
+        ]
+      },
+  
+      {
+        "type": "timeseries",
+        "title": "Network Throughput by DB",
+        "gridPos": { "x": 0, "y": 28, "w": 24, "h": 8 },
+        "targets": [
+          {
+            "expr": "rate(pgbouncer_stats_totals_received_bytes_total{database=~\"$database\"}[1m])",
+            "legendFormat": "{{database}} in"
+          },
+          {
+            "expr": "rate(pgbouncer_stats_totals_sent_bytes_total{database=~\"$database\"}[1m])",
+            "legendFormat": "{{database}} out"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "Bps"
+          }
+        }
+      }
+  
+    ]
+  }

@@ -1,15 +1,174 @@
 {
-    "title": "Postgres Basic",
-    "panels": [
+  "title": "PostgreSQL Overview",
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "5s",
+
+  "templating": {
+    "list": [
       {
-        "type": "graph",
-        "title": "Connections",
-        "targets": [
-          {
-            "expr": "pg_stat_database_numbackends",
-            "legendFormat": "connections"
-          }
-        ]
+        "name": "datname",
+        "type": "query",
+        "datasource": "Prometheus",
+        "definition": "label_values(pg_stat_database_xact_commit, datname)",
+        "query": {
+          "query": "label_values(pg_stat_database_xact_commit, datname)",
+          "refId": "StandardVariableQuery"
+        },
+        "includeAll": true,
+        "allValue": ".*"
       }
     ]
-  }
+  },
+
+  "panels": [
+
+    {
+      "type": "stat",
+      "title": "Total Connections",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "sum(pg_stat_activity_count)"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Active Queries",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "sum(pg_stat_activity_count{state=\"active\"})"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Idle Connections",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "sum(pg_stat_activity_count{state=\"idle\"})"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "TPS",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "rate(pg_stat_database_xact_commit[1m]) + rate(pg_stat_database_xact_rollback[1m])"
+        }
+      ]
+    },
+
+    {
+      "type": "timeseries",
+      "title": "Transactions (TPS)",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "rate(pg_stat_database_xact_commit{datname=~\"$datname\"}[1m])",
+          "legendFormat": "{{datname}} commits"
+        },
+        {
+          "expr": "rate(pg_stat_database_xact_rollback{datname=~\"$datname\"}[1m])",
+          "legendFormat": "{{datname}} rollbacks"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Tuples (Reads vs Writes)",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "rate(pg_stat_database_tup_returned{datname=~\"$datname\"}[1m])",
+          "legendFormat": "returned"
+        },
+        {
+          "expr": "rate(pg_stat_database_tup_fetched{datname=~\"$datname\"}[1m])",
+          "legendFormat": "fetched"
+        },
+        {
+          "expr": "rate(pg_stat_database_tup_inserted{datname=~\"$datname\"}[1m])",
+          "legendFormat": "inserted"
+        },
+        {
+          "expr": "rate(pg_stat_database_tup_updated{datname=~\"$datname\"}[1m])",
+          "legendFormat": "updated"
+        },
+        {
+          "expr": "rate(pg_stat_database_tup_deleted{datname=~\"$datname\"}[1m])",
+          "legendFormat": "deleted"
+        }
+      ]
+    },
+
+    {
+      "type": "timeseries",
+      "title": "Cache Hit Ratio (%)",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 6 },
+      "targets": [
+        {
+          "expr": "100 * sum(rate(pg_stat_database_blks_hit{datname=~\"$datname\"}[1m])) / (sum(rate(pg_stat_database_blks_hit{datname=~\"$datname\"}[1m])) + sum(rate(pg_stat_database_blks_read{datname=~\"$datname\"}[1m])))",
+          "legendFormat": "cache hit %"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Disk Reads",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 6 },
+      "targets": [
+        {
+          "expr": "rate(pg_stat_database_blks_read{datname=~\"$datname\"}[1m])",
+          "legendFormat": "{{datname}} reads"
+        }
+      ]
+    },
+
+    {
+      "type": "timeseries",
+      "title": "Locks",
+      "gridPos": { "x": 0, "y": 18, "w": 12, "h": 6 },
+      "targets": [
+        {
+          "expr": "sum(pg_locks_count{datname=~\"$datname\"})",
+          "legendFormat": "locks"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Deadlocks",
+      "gridPos": { "x": 12, "y": 18, "w": 12, "h": 6 },
+      "targets": [
+        {
+          "expr": "rate(pg_stat_database_deadlocks{datname=~\"$datname\"}[5m])",
+          "legendFormat": "deadlocks/sec"
+        }
+      ]
+    },
+
+    {
+      "type": "timeseries",
+      "title": "Database Size",
+      "gridPos": { "x": 0, "y": 24, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "expr": "pg_database_size_bytes{datname=~\"$datname\"}",
+          "legendFormat": "{{datname}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      }
+    }
+
+  ]
+}

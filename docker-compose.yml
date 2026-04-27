@@ -36,16 +36,39 @@ services:
     ports:
       - "5433:5432"
 
+  pgbouncer:
+    image: edoburu/pgbouncer
+    container_name: pgbouncer
+    restart: unless-stopped
+    depends_on:
+      - pg-primary
+    ports:
+      - "6432:6432"
+    volumes:
+      - ./pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini
+      - ./pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt
+
   postgres-exporter:
     image: quay.io/prometheuscommunity/postgres-exporter
     container_name: postgres-exporter
     restart: unless-stopped
     environment:
-      DATA_SOURCE_NAME: "postgresql://admin:admin@pg-primary:5432/postgres?sslmode=disable"
+      DATA_SOURCE_NAME: "postgresql://admin:admin@pgbouncer:6432/postgres?sslmode=disable"
     ports:
       - "9187:9187"
     depends_on:
-      - pg-primary
+      - pgbouncer
+
+  pgbouncer-exporter:
+    image: prometheuscommunity/pgbouncer-exporter
+    container_name: pgbouncer-exporter
+    restart: unless-stopped
+    depends_on:
+      - pgbouncer
+    command:
+      - "--pgBouncer.connectionString=postgres://admin:admin@pgbouncer:6432/pgbouncer?sslmode=disable"
+    ports:
+      - "9127:9127"
 
   prometheus:
     image: prom/prometheus
@@ -67,6 +90,22 @@ services:
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
     ports:
       - "3000:3000"
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - pg-primary
+      - pgbouncer
+    volumes:
+      - ./pgadmin/servers.json:/pgadmin4/servers.json
+
 
 volumes:
   pg_primary_data:

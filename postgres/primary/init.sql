@@ -7,3 +7,5 @@ CREATE TABLE test_data (
 );
 
 INSERT INTO test_data (data) VALUES ('hello from primary');
+
+ALTER USER admin WITH PASSWORD 'admin';
